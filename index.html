@@ -56,6 +56,21 @@
         return Number.isFinite(n) ? n : 0;
       }
 
+      function normalizeBase64Image(input) {
+        if (!input || typeof input !== "string") return "";
+        var value = input.trim();
+        if (!value) return "";
+        if (value.indexOf("http://") === 0 || value.indexOf("https://") === 0) return "";
+        if (value.indexOf("data:image") === 0) {
+          var marker = "base64,";
+          var idx = value.toLowerCase().indexOf(marker);
+          if (idx === -1) return "";
+          value = value.substring(idx + marker.length).trim();
+        }
+        if (!/^[A-Za-z0-9+/=]+$/.test(value)) return "";
+        return value;
+      }
+
       window.fetch = async function (input, init) {
         var url = typeof input === "string" ? input : (input && input.url) || "";
         var isLegacyCreatePix = /\/functions\/v1\/create-pix(?:\?|$)/.test(url);
@@ -122,24 +137,24 @@
           var pixCode = upstreamJson.pix_code || upstreamJson.pixCode || "";
           var txid = upstreamJson.txid || upstreamJson.id || "";
 
-          if (!pixQrCode || !pixCode) {
+          if (!pixCode) {
             return new Response(
               JSON.stringify({ success: false, error: "Erro ao gerar QR Code" }),
               { status: 500, headers: { "Content-Type": "application/json" } }
             );
           }
 
-          var qrBase64 = pixQrCode.indexOf("data:image") === 0
-            ? (pixQrCode.split("base64,")[1] || pixQrCode)
-            : pixQrCode;
+          var qrBase64 = normalizeBase64Image(pixQrCode);
 
           var legacyResponse = {
             success: true,
             qr_code: pixCode,
-            qr_code_base64: qrBase64,
             order_id: txid,
             txid: txid
           };
+          if (qrBase64) {
+            legacyResponse.qr_code_base64 = qrBase64;
+          }
 
           return new Response(JSON.stringify(legacyResponse), {
             status: 200,
