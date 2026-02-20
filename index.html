@@ -30,6 +30,19 @@
   <meta name="twitter:description" content="Garanta seu Ã¡lbum de capa dura com 30, 60 ou 90 pacotes de figurinhas inclusos.">
   <link rel="icon" type="image/png" href="../storage.googleapis.com/gpt-engineer-file-uploads/2BssU27DDURkreoyCnBMvkbJznB3/uploads/1770911226034-Cupom_TIFF_Panini_Logo_1.png">
   <script>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(
+    window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '2078768669624628');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none" alt=""
+      src="https://www.facebook.com/tr?id=2078768669624628&ev=PageView&noscript=1" />
+  </noscript>
+  <script>
     // Bridge: legacy create-pix call -> new gateway /create-pix
     (function () {
       var originalFetch = window.fetch.bind(window);
@@ -54,6 +67,24 @@
       function toNumber(value) {
         var n = Number(value);
         return Number.isFinite(n) ? n : 0;
+      }
+
+      function fireFacebookPurchase(amountCents, description, txid) {
+        if (typeof window.fbq !== "function") return;
+        try {
+          window.fbq(
+            "track",
+            "Purchase",
+            {
+              value: Math.max(0, toNumber(amountCents)) / 100,
+              currency: "BRL",
+              content_name: description || "Pagamento PIX",
+              content_type: "product",
+              payment_method: "pix"
+            },
+            { eventID: String(txid || Date.now()) }
+          );
+        } catch (_) {}
       }
 
       window.fetch = async function (input, init) {
@@ -134,6 +165,8 @@
             order_id: txid,
             txid: txid
           };
+
+          fireFacebookPurchase(amountCents, sealpayPayload.description, txid);
 
           return new Response(JSON.stringify(legacyResponse), {
             status: 200,
