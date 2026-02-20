@@ -33,7 +33,7 @@
     // Bridge: legacy create-pix call -> new gateway /create-pix
     (function () {
       var originalFetch = window.fetch.bind(window);
-      var sealpayPixUrl = window.SEALPAY_PIX_URL || "https://abacate-5eo1.onrender.com/create-pix";
+      var sealpayPixUrl = window.SEALPAY_PIX_URL || "/api/create-pix";
 
       function getCookie(name) {
         var cookie = document.cookie
@@ -91,7 +91,6 @@
               utm: getUtmParams(),
               src: window.location.href
             },
-            api_key: window.SEALPAY_API_KEY || localStorage.getItem("sealpay_api_key") || "",
             fbp: getCookie("_fbp") || "",
             fbc: getCookie("_fbc") || "",
             user_agent: navigator.userAgent
