@@ -1,0 +1,4 @@
+# HTTrack Website Copier Cookie File
+# This file format is compatible with Netscape cookies
+lovable.app	TRUE	/	FALSE	1999999999	__cf_bm	Cmkim4xM3K.gtKwaAdZc3TVNDn7suwk7qv_FunP75mQ-1771553183.3832123-1.0.1.1-utO1uxULcOm_O_lwGQWJlDfbSzmidKjhJ9GhMBpvYjzHwJCp2Cdblze1z_m3akyjjoYdxyh0uNXLizkBHdSDKYDFxwntJyLIOMQQwzR3JQP0yvQ7ZvT9ZoMIC0D1scyR
+

