@@ -56,24 +56,6 @@
         return Number.isFinite(n) ? n : 0;
       }
 
-      function normalizeBase64Image(input) {
-        if (!input || typeof input !== "string") return "";
-        var value = input.trim();
-        if (!value) return "";
-        if (value.indexOf("http://") === 0 || value.indexOf("https://") === 0) return "";
-        if (value.indexOf("data:image") === 0) {
-          var marker = "base64,";
-          var idx = value.toLowerCase().indexOf(marker);
-          if (idx === -1) return "";
-          value = value.substring(idx + marker.length).trim();
-        }
-        if (!/^[A-Za-z0-9+/=]+$/.test(value)) return "";
-        // Accept only common image signatures in base64 to avoid treating PIX text as image.
-        var isImageSignature = /^(iVBORw0KGgo|\/9j\/|R0lGOD|UklGR)/.test(value);
-        if (!isImageSignature) return "";
-        return value;
-      }
-
       window.fetch = async function (input, init) {
         var url = typeof input === "string" ? input : (input && input.url) || "";
         var isLegacyCreatePix = /\/functions\/v1\/create-pix(?:\?|$)/.test(url);
@@ -136,7 +118,6 @@
             );
           }
 
-          var pixQrCode = upstreamJson.pix_qr_code || upstreamJson.pixQrCode || "";
           var pixCode = upstreamJson.pix_code || upstreamJson.pixCode || "";
           var txid = upstreamJson.txid || upstreamJson.id || "";
 
@@ -147,17 +128,12 @@
             );
           }
 
-          var qrBase64 = normalizeBase64Image(pixQrCode);
-
           var legacyResponse = {
             success: true,
             qr_code: pixCode,
             order_id: txid,
             txid: txid
           };
-          if (qrBase64) {
-            legacyResponse.qr_code_base64 = qrBase64;
-          }
 
           return new Response(JSON.stringify(legacyResponse), {
             status: 200,
