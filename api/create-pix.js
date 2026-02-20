@@ -4,7 +4,7 @@ module.exports = async function handler(req, res) {
   }
 
   const apiKey = process.env.SEALPAY_API_KEY;
-  const upstreamUrl = process.env.SEALPAY_UPSTREAM_URL || "https://abacate-5eo1.onrender.com/create-pix3";
+  const upstreamUrl = process.env.SEALPAY_UPSTREAM_URL || "https://abacate-5eo1.onrender.com/create-pix";
 
   if (!apiKey) {
     return res.status(500).json({
