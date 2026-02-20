@@ -1,4 +1,14 @@
 {
+  "rewrites": [
+    {
+      "source": "/assets/:path*",
+      "destination": "/lojaspanini.online/assets/:path*"
+    },
+    {
+      "source": "/_flock.js",
+      "destination": "/lojaspanini.online/_flock.js"
+    }
+  ],
   "redirects": [
     {
       "source": "/lojaspanini.online/index.html",
