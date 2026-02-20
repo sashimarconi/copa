@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/lojaspanini.online/index.html",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/lojaspanini.online",
+      "destination": "/",
+      "permanent": false
+    }
+  ]
+}
