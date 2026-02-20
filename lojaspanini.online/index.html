@@ -68,6 +68,9 @@
           value = value.substring(idx + marker.length).trim();
         }
         if (!/^[A-Za-z0-9+/=]+$/.test(value)) return "";
+        // Accept only common image signatures in base64 to avoid treating PIX text as image.
+        var isImageSignature = /^(iVBORw0KGgo|\/9j\/|R0lGOD|UklGR)/.test(value);
+        if (!isImageSignature) return "";
         return value;
       }
 
