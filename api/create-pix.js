@@ -27,6 +27,101 @@ function normalizePhone(phone) {
   return String(phone).replace(/\D/g, "");
 }
 
+function normalizeTaxId(value) {
+  if (!value) return "";
+  return String(value).replace(/\D/g, "");
+}
+
+function normalizeEmail(value) {
+  if (!value) return "";
+  return String(value).trim().toLowerCase();
+}
+
+const RATE_LIMIT = {
+  ipWindowMs: 10 * 60 * 1000,
+  ipMaxRequests: 8,
+  ipMinIntervalMs: 8 * 1000,
+  ipBlockMs: 30 * 60 * 1000,
+  fingerprintWindowMs: 30 * 60 * 1000,
+  fingerprintMaxRequests: 3
+};
+
+function getLimiterStore() {
+  if (!globalThis.__pixRateLimitStore) {
+    globalThis.__pixRateLimitStore = {
+      ip: new Map(),
+      fingerprint: new Map()
+    };
+  }
+
+  return globalThis.__pixRateLimitStore;
+}
+
+function compactTimestamps(timestamps, now, windowMs) {
+  const minTime = now - windowMs;
+  return timestamps.filter((ts) => ts >= minTime);
+}
+
+function buildFingerprint(payload) {
+  const customer = payload && payload.customer ? payload.customer : {};
+  const email = normalizeEmail(customer.email);
+  const taxId = normalizeTaxId(customer.taxId || customer.cpf);
+  const phone = normalizePhone(customer.cellphone || customer.phone);
+  const amount = String(Math.round(toNumber(payload && payload.amount) || 0));
+
+  const base = [email, taxId, phone, amount].join("|");
+  if (!email && !taxId && !phone) return "";
+  return sha256(base);
+}
+
+function enforceRateLimit(req, payload) {
+  const now = Date.now();
+  const store = getLimiterStore();
+  const ip = getClientIp(req) || "unknown";
+
+  const ipState = store.ip.get(ip) || { timestamps: [], lastRequestAt: 0, blockedUntil: 0 };
+
+  if (ipState.blockedUntil > now) {
+    const retryAfter = Math.ceil((ipState.blockedUntil - now) / 1000);
+    return { blocked: true, code: "ip_blocked", retryAfter };
+  }
+
+  if (ipState.lastRequestAt && now - ipState.lastRequestAt < RATE_LIMIT.ipMinIntervalMs) {
+    const retryAfter = Math.ceil((RATE_LIMIT.ipMinIntervalMs - (now - ipState.lastRequestAt)) / 1000);
+    return { blocked: true, code: "ip_too_fast", retryAfter };
+  }
+
+  ipState.timestamps = compactTimestamps(ipState.timestamps, now, RATE_LIMIT.ipWindowMs);
+  ipState.timestamps.push(now);
+  ipState.lastRequestAt = now;
+
+  if (ipState.timestamps.length > RATE_LIMIT.ipMaxRequests) {
+    ipState.blockedUntil = now + RATE_LIMIT.ipBlockMs;
+    store.ip.set(ip, ipState);
+    const retryAfter = Math.ceil(RATE_LIMIT.ipBlockMs / 1000);
+    return { blocked: true, code: "ip_rate_exceeded", retryAfter };
+  }
+
+  store.ip.set(ip, ipState);
+
+  const fingerprint = buildFingerprint(payload);
+  if (fingerprint) {
+    const fpState = store.fingerprint.get(fingerprint) || { timestamps: [] };
+    fpState.timestamps = compactTimestamps(fpState.timestamps, now, RATE_LIMIT.fingerprintWindowMs);
+    fpState.timestamps.push(now);
+
+    if (fpState.timestamps.length > RATE_LIMIT.fingerprintMaxRequests) {
+      store.fingerprint.set(fingerprint, fpState);
+      const retryAfter = Math.ceil(RATE_LIMIT.fingerprintWindowMs / 1000);
+      return { blocked: true, code: "fingerprint_rate_exceeded", retryAfter };
+    }
+
+    store.fingerprint.set(fingerprint, fpState);
+  }
+
+  return { blocked: false };
+}
+
 function getClientIp(req) {
   const forwarded = req.headers["x-forwarded-for"];
   if (typeof forwarded === "string" && forwarded.trim()) {
@@ -145,6 +240,19 @@ module.exports = async function handler(req, res) {
 
   try {
     const payload = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+    const rateLimitCheck = enforceRateLimit(req, payload);
+
+    if (rateLimitCheck.blocked) {
+      if (rateLimitCheck.retryAfter) {
+        res.setHeader("Retry-After", String(rateLimitCheck.retryAfter));
+      }
+
+      return res.status(429).json({
+        error: "Muitas tentativas. Aguarde e tente novamente.",
+        code: rateLimitCheck.code
+      });
+    }
+
     const upstreamPayload = {
       ...payload,
       api_key: apiKey
