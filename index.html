@@ -64,6 +64,18 @@
         return utm;
       }
 
+      function getTtclid() {
+        var fromQuery = new URLSearchParams(window.location.search).get("ttclid");
+        if (fromQuery) return fromQuery;
+
+        try {
+          var fromStorage = window.localStorage ? localStorage.getItem("ttclid") : "";
+          if (fromStorage) return fromStorage;
+        } catch (_) {}
+
+        return getCookie("ttclid") || "";
+      }
+
       function toNumber(value) {
         var n = Number(value);
         return Number.isFinite(n) ? n : 0;
@@ -124,6 +136,7 @@
             },
             fbp: getCookie("_fbp") || "",
             fbc: getCookie("_fbc") || "",
+            ttclid: getTtclid(),
             user_agent: navigator.userAgent
           };
 
