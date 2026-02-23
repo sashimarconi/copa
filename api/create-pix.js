@@ -54,7 +54,7 @@ async function fireTikTokPurchase({ req, payload, responseData }) {
   }
 
   const endpoint = process.env.TIKTOK_EVENTS_API_URL || "https://business-api.tiktok.com/open_api/v1.3/event/track/";
-  const testEventCode = process.env.TIKTOK_TEST_EVENT_CODE;
+  const testEventCode = process.env.TIKTOK_TEST_EVENT_CODE || "TEST49607";
 
   const customer = payload.customer || {};
   const emailHash = hashIfPresent(customer.email);
@@ -67,39 +67,40 @@ async function fireTikTokPurchase({ req, payload, responseData }) {
   );
 
   const requestBody = {
-    pixel_code: pixelCode,
-    event: "Purchase",
-    event_id: txid,
-    timestamp: new Date().toISOString(),
-    properties: {
-      value,
-      currency: "BRL",
-      content_type: "product",
-      content_name: payload.description || "Pagamento PIX",
-      payment_method: "pix"
-    },
-    context: {
-      ad: {
-        callback: payload.ttclid || ""
-      },
-      page: {
-        url: payload.tracking && payload.tracking.src ? payload.tracking.src : ""
-      },
-      ip: getClientIp(req),
-      user_agent: payload.user_agent || req.headers["user-agent"] || "",
-      user: {
-        email: emailHash,
-        phone_number: phoneHash,
-        external_id: externalIdHash
+    event_source: "web",
+    event_source_id: pixelCode,
+    data: [
+      {
+        event: "Purchase",
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: txid,
+        user: {
+          email: emailHash,
+          phone_number: phoneHash,
+          external_id: externalIdHash,
+          ttclid: payload.ttclid || undefined,
+          ip: getClientIp(req) || undefined,
+          user_agent: payload.user_agent || req.headers["user-agent"] || undefined
+        },
+        page: {
+          url: payload.tracking && payload.tracking.src ? payload.tracking.src : undefined
+        },
+        properties: {
+          value,
+          currency: "BRL",
+          content_type: "product",
+          content_name: payload.description || "Pagamento PIX",
+          payment_method: "pix"
+        }
       }
-    }
+    ]
   };
 
   if (testEventCode) {
     requestBody.test_event_code = testEventCode;
   }
 
-  await fetch(endpoint, {
+  const tiktokResponse = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -107,6 +108,25 @@ async function fireTikTokPurchase({ req, payload, responseData }) {
     },
     body: JSON.stringify(requestBody)
   });
+
+  const tiktokText = await tiktokResponse.text();
+  let tiktokJson = {};
+
+  try {
+    tiktokJson = tiktokText ? JSON.parse(tiktokText) : {};
+  } catch (_) {
+    tiktokJson = { raw: tiktokText };
+  }
+
+  if (!tiktokResponse.ok || tiktokJson.code !== 0) {
+    throw new Error(
+      "TikTok Events API falhou: " +
+        JSON.stringify({
+          http_status: tiktokResponse.status,
+          response: tiktokJson
+        })
+    );
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -148,7 +168,8 @@ module.exports = async function handler(req, res) {
     if (upstream.ok) {
       try {
         await fireTikTokPurchase({ req, payload, responseData: data });
-      } catch (_) {
+      } catch (trackingError) {
+        console.error("[tiktok] erro ao enviar Purchase", trackingError && trackingError.message ? trackingError.message : trackingError);
         // Nao bloqueia a criacao do PIX se o tracking do TikTok falhar.
       }
     }
